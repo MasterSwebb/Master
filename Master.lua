@@ -27,6 +27,7 @@ local legitAimEnabled = false
 local aimLockEnabled = false
 local autoHealEnabled = false
 local autoShootEnabled = false
+local targetPart = "Head"
 
 --// Combat Toggles
 CombatSection:AddToggle({Name = "Aimbot", Default = false, Callback = function(v)
@@ -53,6 +54,15 @@ CombatSection:AddToggle({Name = "Auto Shoot", Default = false, Callback = functi
 	autoShootEnabled = v
 end})
 
+CombatSection:AddDropdown({
+	Name = "Target Part",
+	Default = 1,
+	Options = {"Head", "Torso", "Legs", "Arms"},
+	Callback = function(v)
+		targetPart = v
+	end
+})
+
 --// Auto Heal Logic
 local function AutoHeal()
     local player = game.Players.LocalPlayer
@@ -69,6 +79,26 @@ end
 game:GetService("RunService").Heartbeat:Connect(function()
     if autoHealEnabled then
         AutoHeal()
+    end
+end)
+
+--// AutoShoot Logic
+local function AutoShoot()
+    -- Simple auto-shoot functionality (can be customized)
+    if autoShootEnabled then
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+        -- Shoot at the target part of a character
+        if mouse.Target then
+            -- Logic to shoot at the target
+        end
+    end
+end
+
+-- Auto-Shoot Loop
+game:GetService("RunService").Heartbeat:Connect(function()
+    if autoShootEnabled then
+        AutoShoot()
     end
 end)
 
@@ -244,10 +274,11 @@ GunSection:AddSlider({
 	end
 })
 
---// Exploits Tab
+--// Exploits Tab (Additional)
 local ExploitTab = Window:MakeTab({Name = "Exploits", Icon = "rbxassetid://4483345998", PremiumOnly = false})
 local ExploitSection = ExploitTab:AddSection({Name = "Game Manipulation"})
 
+-- Exploit Options
 ExploitSection:AddButton({
 	Name = "Teleport (Example)",
 	Callback = function()
@@ -272,9 +303,6 @@ ExploitSection:AddSlider({
 	end
 })
 
-local antiAimEnabled = false
-local fakeLagEnabled = false
-
 ExploitSection:AddToggle({Name = "Anti-Aim", Default = false, Callback = function(v)
 	antiAimEnabled = v
 end})
@@ -282,26 +310,6 @@ end})
 ExploitSection:AddToggle({Name = "Fake Lag", Default = false, Callback = function(v)
 	fakeLagEnabled = v
 end})
-
---// UI Settings Tab
-local SettingsTab = Window:MakeTab({Name = "UI Settings", Icon = "rbxassetid://4483345998", PremiumOnly = false})
-local SettingsSection = SettingsTab:AddSection({Name = "General"})
-
-SettingsSection:AddBind({
-	Name = "Toggle Menu Keybind",
-	Default = Enum.KeyCode.RightShift,
-	Hold = false,
-	Callback = function()
-		-- OrionLib toggles automatically
-	end
-})
-
-SettingsSection:AddButton({
-	Name = "Destroy UI",
-	Callback = function()
-		OrionLib:Destroy()
-	end
-})
 
 --// Finalize UI
 OrionLib:Init()
