@@ -1,21 +1,14 @@
--- Destroy previous UI if any
-if _G.OrionLib and _G.OrionLib.Destroy then
-    _G.OrionLib:Destroy()
-    _G.OrionLib = nil
+-- Wait for game and player to load
+if not game:IsLoaded() then
+    game.Loaded:Wait()
 end
 
--- Load fresh OrionLib forcibly to avoid cache
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr?ts="..tick()))()
-_G.OrionLib = OrionLib
-assert(OrionLib, "Failed to load Orion Library")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Notification
-OrionLib:MakeNotification({
-    Name = "Master v1",
-    Content = "Coded by Master Sweb",
-    Image = "rbxassetid://4483345998",
-    Time = 5
-})
+-- Load Orion library
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr"))()
+assert(OrionLib, "Failed to load Orion Library")
 
 -- Main Window
 local Window = OrionLib:MakeWindow({
@@ -25,8 +18,6 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "MasterHub"
 })
 
-local LocalPlayer = game.Players.LocalPlayer
-
 -- ======= Combat Tab =======
 local CombatTab = Window:MakeTab({Name = "Combat", Icon = "rbxassetid://4483345998"})
 local CombatSection = CombatTab:AddSection({Name = "Aimbot Features"})
@@ -35,6 +26,9 @@ local aimbotEnabled = false
 local silentAimEnabled = false
 local legitAimEnabled = false
 local aimLockEnabled = false
+local autoShootEnabled = false
+local autoHealEnabled = false
+local targetPart = "Head"
 
 CombatSection:AddToggle({Name = "Aimbot", Default = false, Callback = function(v)
     aimbotEnabled = v
@@ -56,6 +50,26 @@ CombatSection:AddToggle({Name = "Aim Lock", Default = false, Callback = function
     print("Aim Lock:", v)
 end})
 
+CombatSection:AddToggle({Name = "Auto Shoot", Default = false, Callback = function(v)
+    autoShootEnabled = v
+    print("Auto Shoot:", v)
+end})
+
+CombatSection:AddToggle({Name = "Auto Heal", Default = false, Callback = function(v)
+    autoHealEnabled = v
+    print("Auto Heal:", v)
+end})
+
+CombatSection:AddDropdown({
+    Name = "Target Part",
+    Default = "Head",
+    Options = {"Head", "Torso", "HumanoidRootPart"},
+    Callback = function(v)
+        targetPart = v
+        print("Target Part:", v)
+    end
+})
+
 -- ======= Visuals Tab =======
 local VisualsTab = Window:MakeTab({Name = "Visuals", Icon = "rbxassetid://4483345998"})
 local VisualsSection = VisualsTab:AddSection({Name = "ESP Features"})
@@ -64,6 +78,8 @@ local boxESPEnabled = false
 local nameESPEnabled = false
 local healthESPEnabled = false
 local chamsEnabled = false
+local distanceESPEnabled = false
+local espColor = Color3.fromRGB(255, 255, 255)
 
 VisualsSection:AddToggle({Name = "Box ESP", Default = false, Callback = function(v)
     boxESPEnabled = v
@@ -85,6 +101,20 @@ VisualsSection:AddToggle({Name = "Chams", Default = false, Callback = function(v
     print("Chams:", v)
 end})
 
+VisualsSection:AddToggle({Name = "Distance ESP", Default = false, Callback = function(v)
+    distanceESPEnabled = v
+    print("Distance ESP:", v)
+end})
+
+VisualsSection:AddColorPicker({
+    Name = "ESP Color",
+    Default = espColor,
+    Callback = function(color)
+        espColor = color
+        print("ESP Color:", color)
+    end
+})
+
 -- ======= Movement Tab =======
 local MovementTab = Window:MakeTab({Name = "Movement", Icon = "rbxassetid://4483345998"})
 local MovementSection = MovementTab:AddSection({Name = "Player Movement"})
@@ -98,155 +128,145 @@ local bunnyHopEnabled = false
 MovementSection:AddSlider({
     Name = "WalkSpeed",
     Min = 16,
-    Max = 100,
+    Max = 150,
     Default = 16,
     Color = Color3.fromRGB(255, 255, 255),
     Increment = 1,
     ValueName = "Speed",
     Callback = function(v)
         walkSpeed = v
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChildOfClass("Humanoid") then
-            character.Humanoid.WalkSpeed = walkSpeed
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char.Humanoid.WalkSpeed = walkSpeed
         end
-        print("WalkSpeed set to", v)
+        print("WalkSpeed:", v)
     end
 })
 
 MovementSection:AddSlider({
     Name = "JumpPower",
     Min = 50,
-    Max = 200,
+    Max = 300,
     Default = 100,
     Color = Color3.fromRGB(255, 255, 255),
     Increment = 5,
     ValueName = "Power",
     Callback = function(v)
         jumpPower = v
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChildOfClass("Humanoid") then
-            character.Humanoid.JumpPower = jumpPower
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char.Humanoid.JumpPower = jumpPower
         end
-        print("JumpPower set to", v)
+        print("JumpPower:", v)
     end
 })
 
-MovementSection:AddToggle({Name = "Fly", Default = false, Callback = function(v)
-    flyEnabled = v
-    print("Fly:", v)
-    local character = LocalPlayer.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
+MovementSection:AddToggle({
+    Name = "Fly",
+    Default = false,
+    Callback = function(v)
+        flyEnabled = v
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-    if flyEnabled then
-        local BodyGyro = Instance.new("BodyGyro")
-        local BodyVelocity = Instance.new("BodyVelocity")
+        if flyEnabled then
+            local BodyGyro = Instance.new("BodyGyro", hrp)
+            local BodyVelocity = Instance.new("BodyVelocity", hrp)
+            BodyGyro.P = 9000
+            BodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+            BodyGyro.CFrame = hrp.CFrame
+            BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
 
-        BodyGyro.P = 90000
-        BodyGyro.maxTorque = Vector3.new(4000,4000,4000)
-        BodyGyro.cframe = rootPart.CFrame
-        BodyGyro.Parent = rootPart
+            local UIS = game:GetService("UserInputService")
+            local RunService = game:GetService("RunService")
 
-        BodyVelocity.velocity = Vector3.new(0,0,0)
-        BodyVelocity.maxForce = Vector3.new(4000,4000,4000)
-        BodyVelocity.Parent = rootPart
-
-        local UserInputService = game:GetService("UserInputService")
-        local RunService = game:GetService("RunService")
-
-        local function flyUpdate()
-            local camera = workspace.CurrentCamera
-            local moveDirection = Vector3.new(0,0,0)
-
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDirection = moveDirection + camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDirection = moveDirection - camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDirection = moveDirection - camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDirection = moveDirection + camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDirection = moveDirection + Vector3.new(0,1,0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                moveDirection = moveDirection - Vector3.new(0,1,0)
-            end
-
-            BodyVelocity.velocity = moveDirection.Unit * 50
-            BodyGyro.cframe = camera.CFrame
-        end
-
-        MovementTab.FlyConnection = RunService.Heartbeat:Connect(flyUpdate)
-    else
-        if MovementTab.FlyConnection then
-            MovementTab.FlyConnection:Disconnect()
-            MovementTab.FlyConnection = nil
-        end
-
-        if rootPart:FindFirstChild("BodyGyro") then
-            rootPart.BodyGyro:Destroy()
-        end
-        if rootPart:FindFirstChild("BodyVelocity") then
-            rootPart.BodyVelocity:Destroy()
-        end
-    end
-end})
-
-MovementSection:AddToggle({Name = "NoClip", Default = false, Callback = function(v)
-    noClipEnabled = v
-    print("NoClip:", v)
-    local character = LocalPlayer.Character
-    if not character then return end
-
-    if noClipEnabled then
-        local function setCanCollideFalse()
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+            local function FlyUpdate()
+                local moveDir = Vector3.new()
+                if UIS:IsKeyDown(Enum.KeyCode.W) then
+                    moveDir = moveDir + hrp.CFrame.LookVector
                 end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then
+                    moveDir = moveDir - hrp.CFrame.LookVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then
+                    moveDir = moveDir - hrp.CFrame.RightVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then
+                    moveDir = moveDir + hrp.CFrame.RightVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.Space) then
+                    moveDir = moveDir + Vector3.new(0,1,0)
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+                    moveDir = moveDir - Vector3.new(0,1,0)
+                end
+
+                BodyVelocity.Velocity = moveDir.Unit * 50
+                BodyGyro.CFrame = hrp.CFrame
+            end
+
+            local conn
+            conn = RunService.Heartbeat:Connect(FlyUpdate)
+            -- Store connection and parts to disable fly later
+            flyEnabled = {BodyGyro=BodyGyro, BodyVelocity=BodyVelocity, Connection=conn}
+            print("Fly Enabled")
+        else
+            if type(flyEnabled) == "table" then
+                flyEnabled.BodyGyro:Destroy()
+                flyEnabled.BodyVelocity:Destroy()
+                flyEnabled.Connection:Disconnect()
+                flyEnabled = false
+                print("Fly Disabled")
             end
         end
+    end
+})
 
-        setCanCollideFalse()
-        MovementTab.NoClipConnection = game:GetService("RunService").Stepped:Connect(setCanCollideFalse)
-    else
-        if MovementTab.NoClipConnection then
-            MovementTab.NoClipConnection:Disconnect()
-            MovementTab.NoClipConnection = nil
-        end
-        for _, part in pairs(character:GetChildren()) do
+MovementSection:AddToggle({
+    Name = "NoClip",
+    Default = false,
+    Callback = function(v)
+        noClipEnabled = v
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, part in pairs(char:GetChildren()) do
             if part:IsA("BasePart") then
-                part.CanCollide = true
+                part.CanCollide = not noClipEnabled
             end
         end
+        print("NoClip:", v)
     end
-end})
+})
 
-MovementSection:AddToggle({Name = "Bunny Hop", Default = false, Callback = function(v)
-    bunnyHopEnabled = v
-    print("Bunny Hop:", v)
-    local character = LocalPlayer.Character
-    if not character then return end
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
+local bunnyHopConn
+MovementSection:AddToggle({
+    Name = "Bunny Hop",
+    Default = false,
+    Callback = function(v)
+        bunnyHopEnabled = v
+        local char = LocalPlayer.Character
+        if not char then return end
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
 
-    if bunnyHopEnabled then
-        MovementTab.BunnyHopConnection = humanoid.Jumping:Connect(function()
-            humanoid.Jump = true
-        end)
-    else
-        if MovementTab.BunnyHopConnection then
-            MovementTab.BunnyHopConnection:Disconnect()
-            MovementTab.BunnyHopConnection = nil
+        if v then
+            bunnyHopConn = humanoid.Jumping:Connect(function()
+                wait(0.1)
+                humanoid.Jump = true
+            end)
+            print("Bunny Hop Enabled")
+        else
+            if bunnyHopConn then
+                bunnyHopConn:Disconnect()
+                bunnyHopConn = nil
+            end
+            print("Bunny Hop Disabled")
         end
     end
-end})
+})
 
 -- ======= Gun Mods Tab =======
 local GunTab = Window:MakeTab({Name = "Gun Mods", Icon = "rbxassetid://4483345998"})
@@ -258,47 +278,69 @@ local infiniteAmmoEnabled = false
 local instantReloadEnabled = false
 local rapidFireEnabled = false
 
-GunSection:AddToggle({Name = "No Recoil", Default = false, Callback = function(v)
-    noRecoilEnabled = v
-    print("No Recoil:", v)
-end})
+GunSection:AddToggle({
+    Name = "No Recoil",
+    Default = false,
+    Callback = function(v)
+        noRecoilEnabled = v
+        print("No Recoil:", v)
+    end
+})
 
-GunSection:AddToggle({Name = "No Spread", Default = false, Callback = function(v)
-    noSpreadEnabled = v
-    print("No Spread:", v)
-end})
+GunSection:AddToggle({
+    Name = "No Spread",
+    Default = false,
+    Callback = function(v)
+        noSpreadEnabled = v
+        print("No Spread:", v)
+    end
+})
 
-GunSection:AddToggle({Name = "Infinite Ammo", Default = false, Callback = function(v)
-    infiniteAmmoEnabled = v
-    print("Infinite Ammo:", v)
-end})
+GunSection:AddToggle({
+    Name = "Infinite Ammo",
+    Default = false,
+    Callback = function(v)
+        infiniteAmmoEnabled = v
+        print("Infinite Ammo:", v)
+    end
+})
 
-GunSection:AddToggle({Name = "Instant Reload", Default = false, Callback = function(v)
-    instantReloadEnabled = v
-    print("Instant Reload:", v)
-end})
+GunSection:AddToggle({
+    Name = "Instant Reload",
+    Default = false,
+    Callback = function(v)
+        instantReloadEnabled = v
+        print("Instant Reload:", v)
+    end
+})
 
-GunSection:AddToggle({Name = "Rapid Fire", Default = false, Callback = function(v)
-    rapidFireEnabled = v
-    print("Rapid Fire:", v)
-end})
+GunSection:AddToggle({
+    Name = "Rapid Fire",
+    Default = false,
+    Callback = function(v)
+        rapidFireEnabled = v
+        print("Rapid Fire:", v)
+    end
+})
 
 -- ======= Exploits Tab =======
 local ExploitTab = Window:MakeTab({Name = "Exploits", Icon = "rbxassetid://4483345998"})
 local ExploitSection = ExploitTab:AddSection({Name = "Game Manipulation"})
 
+local hitboxExpanderValue = 1
+local antiAimEnabled = false
+local fakeLagEnabled = false
+
 ExploitSection:AddButton({
-    Name = "Teleport (Example)",
+    Name = "Teleport to Spawn",
     Callback = function()
         local char = LocalPlayer.Character
-        if char then
-            char:MoveTo(Vector3.new(0, 10, 0))
-            print("Teleported to (0,10,0)")
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(0,10,0)
+            print("Teleported to spawn")
         end
     end
 })
-
-local hitboxExpanderValue = 1
 
 ExploitSection:AddSlider({
     Name = "Hitbox Expander",
@@ -310,22 +352,27 @@ ExploitSection:AddSlider({
     ValueName = "Size",
     Callback = function(v)
         hitboxExpanderValue = v
-        print("Hitbox Expander set to", v)
+        print("Hitbox Expander:", v)
     end
 })
 
-local antiAimEnabled = false
-local fakeLagEnabled = false
+ExploitSection:AddToggle({
+    Name = "Anti-Aim",
+    Default = false,
+    Callback = function(v)
+        antiAimEnabled = v
+        print("Anti-Aim:", v)
+    end
+})
 
-ExploitSection:AddToggle({Name = "Anti-Aim", Default = false, Callback = function(v)
-    antiAimEnabled = v
-    print("Anti-Aim:", v)
-end})
-
-ExploitSection:AddToggle({Name = "Fake Lag", Default = false, Callback = function(v)
-    fakeLagEnabled = v
-    print("Fake Lag:", v)
-end})
+ExploitSection:AddToggle({
+    Name = "Fake Lag",
+    Default = false,
+    Callback = function(v)
+        fakeLagEnabled = v
+        print("Fake Lag:", v)
+    end
+})
 
 -- ======= Settings Tab =======
 local SettingsTab = Window:MakeTab({Name = "Settings", Icon = "rbxassetid://4483345998"})
@@ -335,7 +382,6 @@ SettingsSection:AddButton({
     Name = "Unload UI",
     Callback = function()
         OrionLib:Destroy()
-        _G.OrionLib = nil
         print("UI unloaded")
     end
 })
