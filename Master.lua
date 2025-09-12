@@ -1,5 +1,5 @@
 -- Load OrionLib
-local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
+local OrionLib = https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr"))()
 
 -- Create Window with config saving
 local Window = OrionLib:MakeWindow({
