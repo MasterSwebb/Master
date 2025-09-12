@@ -1,62 +1,21 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr')))()
+--// Load Orion Library
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr"))()
 
+--// Notification
 OrionLib:MakeNotification({
-	Name = "Orion Example",
-	Content = "Orion Example",
+	Name = "Master v1",
+	Content = "Coded by Master Sweb",
 	Image = "rbxassetid://4483345998",
 	Time = 5
 })
 
-
-local Window = OrionLib:MakeWindow({Name = "Orion Example", HidePremium = false, SaveConfig = true, ConfigFolder = "Orion"})
-
---Player Tab--
-
-local PlayerTab = Window:MakeTab({
-	Name = "Player",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
+--// Main Window
+local Window = OrionLib:MakeWindow({
+	Name = "Master v1 | by Master Sweb",
+	HidePremium = true,
+	SaveConfig = true,
+	ConfigFolder = "MasterHub"
 })
 
-local PlayerSection = PlayerTab:AddSection({
-	Name = "Player"
-})
-
-
-PlayerSection:AddSlider({
-	Name = "Walkspeed",
-	Min = 16,
-	Max = 100,
-	Default = 5,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 1,
-	ValueName = "Walkspeed",
-	Callback = function(Value)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-	end    
-})
-
---Player Tab End--
-
---Settings Tab--
-
-local SettingsTab = Window:MakeTab({
-	Name = "Settings",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-local SettingsSection = SettingsTab:AddSection({
-	Name = "Settings"
-})
-
-SettingsSection:AddButton({
-	Name = "Destroy UI",
-	Callback = function()
-        OrionLib:Destroy()
-  	end    
-})
-
---Settings End--
-
-OrionLib:Init() --UI Lib End
+--// Init UI
+OrionLib:Init()
