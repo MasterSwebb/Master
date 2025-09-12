@@ -1,4 +1,4 @@
-local OrionLib = loadstring(game:HttpGet(('https://https://github.com/OrionLibrary/Orion/blob/main/source.lua')))()
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/ZeeZee2Real/shlexware-Orion-main-source/refs/heads/main/gr')))()
 
 OrionLib:MakeNotification({
 	Name = "Orion Example",
